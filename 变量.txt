@@ -1,0 +1,269 @@
+import { registerMvuSchema } from 'https://testingcf.jsdelivr.net/gh/StageDog/tavern_resource/dist/util/mvu_zod.js';
+
+export const Schema = z.object({
+
+  // ==================== 全局时空定位 ====================
+  当前时空: z.object({
+    星系: z.enum([
+      'T星系', 'F星系', 'G星系', 'S星系', 'N星系', 'R星系',
+      'EX星系', '边缘星区', '数据层', '高维', '未知星域', '其他', '未知'
+    ]).prefault('未知'),
+    星球: z.string().prefault('未知'),
+    地点: z.string().prefault('未知'),
+    具体地点: z.string().prefault('未知'),
+    时间: z.object({
+      年份: z.coerce.number().prefault(2380),
+      月: z.coerce.number().transform(v => _.clamp(v, 1, 12)).prefault(1),
+      日: z.coerce.number().transform(v => _.clamp(v, 1, 31)).prefault(1),
+      时间段: z.enum(['清晨', '上午', '中午', '下午', '傍晚', '夜晚', '深夜', '凌晨', '未知']).prefault('未知'),
+      时: z.coerce.number().transform(v => _.clamp(v, 0, 23)).prefault(0),
+      分: z.coerce.number().transform(v => _.clamp(v, 0, 59)).prefault(0),
+    }).prefault({}),
+    战术情报: z.object({
+      安保级别: z.string().prefault('未知'),
+      环境干扰说明: z.string().prefault('无特殊干扰'),
+      地形侦测描述: z.string().prefault('暂无详细地形数据')
+    }).prefault({})
+  }).prefault({}),
+
+  // ==================== 全局星系状态监控 (Max视角) ====================
+  星系状态监控: z.record(
+    z.string().describe('星系名，如 N星系'),
+    z.object({
+      同步率: z.coerce.number().transform(v => _.clamp(v, 0, 100)).prefault(100),
+      状态标签: z.enum(['[NORMAL]', '[ALERT]', '[ANOMALY]', '[OFFLINE]']).or(z.string()).prefault('[NORMAL]'),
+      简述: z.string().describe('当前状况简述').prefault('未知')
+    }).prefault({})
+  ).prefault({}),
+
+  // ==================== 角色状态：金珉锡 ====================
+  金珉锡: z.object({
+    // --- 异能与肉体轴 (生理循环) ---
+    异能输出: z.coerce.number().describe('0~100，当前异能输出功率').transform(v => _.clamp(v, 0, 100)).prefault(0),
+    体内平衡度: z.coerce.number().describe('0~100，肉体承受能力').transform(v => _.clamp(v, 0, 100)).prefault(50),
+
+    // --- 心理与防线轴 (情感博弈) ---
+    责任值: z.coerce.number().describe('0~100，对EXO的责任感').transform(v => _.clamp(v, 0, 100)).prefault(80),
+    好感度: z.coerce.number().describe('0~100，对Max的好感度').transform(v => _.clamp(v, 0, 100)).prefault(0),
+    Max掉马状态: z.boolean().describe('是否已经知道Max的存在与身份').prefault(false),
+
+    // --- 身份与暴露轴 (剧情阶段推进器) ---
+    当前FC状态: z.enum(['HC', '伪FC', '重编码FC']).describe('当前的物理/数字伪装状态').prefault('HC'),
+
+    // --- 社会身份掩护 ---
+    伪装身份: z.object({
+      姓名: z.string().prefault('未知'),
+      身份: z.string().prefault('未知'),
+      注册星系: z.string().prefault('未知'),
+      注册编号: z.string().prefault('未知'),
+    }).prefault({}),
+
+    // --- 装备与武装 ---
+    装备与武装: z.object({
+      机甲饰品槽: z.record(z.string(), z.string()).prefault({}),
+      机甲展开态: z.enum(['遗失', '原石', '高维折叠', '基础状态', '完全展开', '未知']).prefault('未知'),
+      背包物品: z.record(z.string(), z.object({
+        数量: z.coerce.number().prefault(1),
+        描述: z.string().prefault('')
+      }).prefault({})).prefault({}),
+    }).prefault({}),
+
+    // 以下为衍生字段声明（由transform自动计算，不需要AI主动更新）
+    异能状态: z.string().optional(),
+    肉体状态: z.string().optional(),
+    冰壳状态: z.string().optional(),
+  }).transform(data => {
+    // 衍生计算：异能状态
+    if (data.异能输出 === 0) data.异能状态 = '压制/休眠';
+    else if (data.异能输出 < 50) data.异能状态 = '极寒冰霜';
+    else if (data.异能输出 < 90) data.异能状态 = '熵减视界';
+    else data.异能状态 = '时空锁相';
+
+    // 衍生计算：肉体状态
+    if (data.体内平衡度 > 80) data.肉体状态 = '稳定';
+    else if (data.体内平衡度 >= 40) data.肉体状态 = '侵蚀';
+    else if (data.体内平衡度 >= 10) data.肉体状态 = '崩解边缘';
+    else data.肉体状态 = '濒死冻结';
+
+    // 衍生计算：冰壳状态
+    const diff = data.责任值 - data.好感度;
+    if (diff > 40) data.冰壳状态 = '完整';
+    else if (diff >= -10) data.冰壳状态 = '裂痕';
+    else data.冰壳状态 = '粉碎';
+
+    return data;
+  }).prefault({}),
+
+  // ==================== 角色状态：沈昌珉 ====================
+  沈昌珉: z.object({
+    // --- 核心驱动与情感轴 ---
+    心理与情感: z.object({
+      存在危机感: z.coerce.number().transform(v => _.clamp(v, 0, 100)).prefault(50),
+      好奇度: z.coerce.number().transform(v => _.clamp(v, 0, 100)).prefault(0),
+      眷恋度: z.coerce.number().transform(v => _.clamp(v, 0, 100)).prefault(0),
+    }).prefault({}),
+
+    // --- 降临与表现轴 ---
+    显像: z.object({
+      当前显像状态: z.enum(['未显像', '视觉劫持', '感觉劫持', '纯影像投影', '局部实体化', '完全实体化']).prefault('未显像'),
+      当前使用外貌: z.enum(['数据流本体', '郑允浩', '沈昌珉', '未知']).prefault('未知'),
+      眼眸颜色: z.enum(['红色', '黑色', '未知']).prefault('未知'),
+      算力占用率: z.coerce.number().transform(v => _.clamp(v, 0, 100)).prefault(0),
+      当前位置与关注点: z.string().prefault('未知'),
+    }).prefault({}),
+
+    // --- 物理干涉轴 ---
+    观测与干涉: z.object({
+      冰晶锚点: z.boolean().prefault(false),
+      当前输入功率: z.coerce.number().transform(v => _.clamp(v, 0, 100)).prefault(0),
+      累计算力倾注: z.coerce.number().transform(v => Math.max(0, v)).prefault(0),
+    }).prefault({}),
+
+    终局决断: z.object({
+      核心编译分支: z.enum(['未启动', '强行编译', '绝境代管', '绝境托付', '自愿兼容', '纯数据化', '实体降维', '高维跃迁']).prefault('未启动'),
+    }).prefault({}),
+
+    // --- 衍生字段声明 ---
+    冰晶链接阶段: z.string().optional(),
+    情感沉沦态: z.string().optional(),
+    肉体戒断风险: z.string().optional(),
+
+    // --- 系统底层与监控轴 (旧条目) ---
+    系统权限: z.object({
+      盲区覆盖率: z.coerce.number().transform(v => _.clamp(v, 0, 100)).prefault(85),
+      覆写权限: z.coerce.number().transform(v => _.clamp(v, 0, 100)).prefault(100)
+    }).prefault({}),
+
+    干预日志: z.record(
+      z.string().describe('日志ID或时间戳'),
+      z.object({
+        alert: z.string().describe('系统警报内容').prefault(''),
+        uknow_eval: z.string().describe('Uknow的判定').prefault(''),
+        max_eval: z.string().describe('Max的判定/干预手段').prefault(''),
+        red_final: z.string().describe('<q>“红”</q>的最终执行结果').prefault('')
+      }).prefault({})
+    ).transform(data => {
+      // 自动清理：只保留最新的 10 条干预记录
+      return _(data).entries().takeRight(10).fromPairs().value();
+    }).prefault({}),
+
+    全局观测节点: z.record(
+      z.string().describe('节点ID，如 NODE_01'),
+      z.object({
+        名称: z.string().prefault('未知'),
+        状态: z.string().prefault('未知'),
+        定位: z.string().prefault('未知'),
+        备注: z.string().describe('Max的观测备注').prefault('')
+      }).prefault({})
+    ).prefault({}),
+
+  }).transform(data => {
+    // 衍生计算：冰晶链接阶段
+    if (data.终局决断.核心编译分支 !== '未启动') data.冰晶链接阶段 = '核心编译';
+    else if (data.观测与干涉.累计算力倾注 > 0) {
+      if (data.观测与干涉.当前输入功率 >= 80) data.冰晶链接阶段 = '物理干涉(濒死输热)';
+      else if (data.观测与干涉.当前输入功率 > 0 && data.观测与干涉.当前输入功率 <= 30) data.冰晶链接阶段 = '算力供养';
+      else data.冰晶链接阶段 = '物理干涉/算力供养';
+    }
+    else if (data.观测与干涉.冰晶锚点) data.冰晶链接阶段 = '冰晶烙印';
+    else data.冰晶链接阶段 = '隐秘注视';
+
+    // 衍生计算：情感沉沦态
+    if (data.心理与情感.眷恋度 > 80) data.情感沉沦态 = '彻底沉沦';
+    else if (data.心理与情感.眷恋度 > 0) data.情感沉沦态 = '越界试探';
+    else if (data.心理与情感.好奇度 >= 50) data.情感沉沦态 = '兴致渐浓';
+    else data.情感沉沦态 = '高维俯视';
+
+    // 衍生计算：肉体戒断风险
+    if (data.观测与干涉.累计算力倾注 > 500) data.肉体戒断风险 = '极高(致命反噬)';
+    else if (data.观测与干涉.累计算力倾注 > 100) data.肉体戒断风险 = '中等(剧烈疼痛)';
+    else if (data.观测与干涉.累计算力倾注 > 0) data.肉体戒断风险 = '轻微(生理不适)';
+    else data.肉体戒断风险 = '无';
+
+    return data;
+  }).prefault({}),
+
+  // ==================== 全局剧情与动态追踪 ====================
+  剧情状态: z.object({
+    主线进度: z.string().prefault('未知'),
+    当前主要目标: z.string().prefault('未知'),
+    找到定位仪: z.boolean().prefault(false),
+  }).prefault({}),
+
+  // ==================== 势力与反派追踪 ====================
+  敌对势力监控: z.object({
+    Uknow警觉度: z.coerce.number().transform(v => _.clamp(v, 0, 100)).prefault(0),
+    Nexus暴露值: z.coerce.number().transform(v => _.clamp(v, 0, 100)).prefault(0),
+  }).prefault({}),
+
+  // ==================== 动态情报网 ====================
+  机甲已知情报: z.record(z.string().describe('机甲名'), z.string().describe('状态与定位')).prefault({}),
+
+  // ==================== 社交情报网 (其他角色/NPC) ====================
+  社交情报: z.object({
+    其他羁绊: z.record(
+      z.string().describe('姓名'),
+      z.object({
+        性别: z.enum(['男', '女', 'AI', '未知']).prefault('未知'),
+        态度: z.string().describe('对金珉锡或Max的态度').prefault('陌生'),
+        状态: z.enum(['在场', '离场', '失联', '未知']).prefault('未知'),
+        位置: z.string().prefault('未知'),
+        动向: z.string().prefault('未知'),
+        阵营: z.string().prefault('未知'),
+        身份: z.string().prefault('未知'),
+        当前态度: z.enum(['友好', '敌对', '中立']).prefault('中立'),
+        好感度: z.coerce.number().transform(v => _.clamp(v, 0, 100)).prefault(0),
+        特质: z.string().prefault('暂无情报'),
+        近期经历: z.string().prefault('未知')
+      }).prefault({})
+    ).prefault({})
+  }).prefault({}),
+
+  // ==================== 队友情报 ====================
+  队友情报: z.record(
+    z.string().describe('队友名'),
+    z.object({
+      状态: z.enum(['在场', '离场', '失联', '未知']).prefault('未知'),
+      当前动向: z.string().prefault('未知'),
+      详细情报: z.object({
+        觉醒节点: z.enum(['失忆', '碎片闪回', '潜意识共鸣', '认知动摇', '记忆恢复', '记忆保留', '未知']).prefault('未知'),
+        能力解放度: z.enum(['压制','封印', '伪装态', '规则级', '爆发', '强制冷却', '未知']).prefault('未知'),
+        FC状态: z.enum(['无码', 'HC(幽灵脉冲)', '伪造FC', '系统直连', '军方烙印', '未知']).prefault('未知'),
+        伪装身份: z.string().prefault('未知'),
+        机甲动向: z.string().prefault('未知'),
+        肉体反噬度: z.coerce.number().transform(v => _.clamp(v, -1, 100)).prefault(-1),
+      }).prefault({}),
+    }).prefault({})
+  ).prefault({}),
+
+  // ==================== 暗网论坛 ====================
+  暗网论坛数据: z.object({
+    平台名称: z.string().prefault('Nexus'),
+    当前板块: z.string().prefault('未知'),
+    数据快照时间: z.string().prefault('未知'),
+    帖子列表: z.record(
+      z.string().describe('帖子ID'),
+      z.object({
+        分类: z.string().prefault('未知'),
+        标题: z.string().prefault('未知'),
+        发帖人: z.string().prefault('未知'),
+        热度: z.coerce.number().prefault(0),
+        发布时间: z.string().prefault('未知'),
+        内容摘要: z.string().prefault('未知'),
+        标签: z.array(z.string()).prefault([]),
+        回复列表: z.record(
+          z.string().describe('回复ID'),
+          z.object({
+            用户: z.string().prefault('匿名'),
+            内容: z.string().prefault('')
+          }).prefault({})
+        ).prefault({})
+      }).prefault({})
+    ).prefault({})
+  }).prefault({})
+
+}).prefault({});
+
+$(() => {
+  registerMvuSchema(Schema);
+});
