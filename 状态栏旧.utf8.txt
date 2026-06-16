@@ -1,0 +1,761 @@
+```html
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <style>
+    body { margin: 0; padding: 0; background: transparent; }
+    * { box-sizing: border-box; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--theme-scroll); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--theme-time); }
+
+    .draggable-wrapper {
+      --text-main: #333333; --text-muted: rgba(0,0,0,0.55);
+      --bg-header: linear-gradient(90deg, #B2E1FC, #D4EFFF); --bg-sidebar: rgba(178,225,252,0.95);
+      --bg-content: linear-gradient(135deg, #B2E1FC, #F0F4FE); --bg-card: rgba(255,255,255,0.35);
+      --bg-soft: rgba(255,255,255,0.25); --border-color: rgba(0,0,0,0.12); --border-dashed: rgba(0,0,0,0.22);
+      --theme-primary: #43638C; --theme-time: #1565C0; --theme-loc: #00695C; --theme-battle: #B71C1C;
+      --theme-scroll: rgba(67, 99, 140, 0.5);
+      width: 100%; max-width: 450px; aspect-ratio: 13/21; margin: 0 auto;
+      display: flex; flex-direction: column; border-radius: 8px; border: 1px solid var(--border-color);
+      color: var(--text-main); background: var(--bg-content); font-family: monospace; font-size: 16px;
+      overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      transition: background 0.35s ease, color 0.35s ease, border-color 0.35s ease;
+    }
+    .draggable-wrapper.collapsed { aspect-ratio: auto; height: auto; }
+
+    /* 夜间与Max主题保留 */
+    .draggable-wrapper[data-theme="xiumin-night"] {
+      --text-main: #ADD1F3; --text-muted: rgba(255,255,255,0.45);
+      --bg-header: linear-gradient(90deg, #1A1F2B, #282C34); --bg-sidebar: rgba(30,31,36,0.96);
+      --bg-content: linear-gradient(135deg, #1E1F24, #2A2B32); --bg-card: rgba(255,255,255,0.06); --bg-soft: rgba(255,255,255,0.04);
+      --border-color: rgba(255,255,255,0.12); --border-dashed: rgba(255,255,255,0.22);
+      --theme-primary: #ADD1F3; --theme-time: #64B5F6; --theme-loc: #4DB6AC; --theme-battle: #E57373;
+      --theme-scroll: rgba(173, 209, 243, 0.2);
+    }
+    .draggable-wrapper[data-theme="max-day"] {
+      --text-main: #333333; --text-muted: rgba(0,0,0,0.6);
+      --bg-header: linear-gradient(90deg, #FCAEBB, #FDD5D9); --bg-sidebar: rgba(252,174,187,0.95);
+      --bg-content: linear-gradient(135deg, #FCAEBB, #FEF0F2); --bg-card: rgba(255,255,255,0.45); --bg-soft: rgba(255,255,255,0.3);
+      --border-color: rgba(173,30,24,0.15); --border-dashed: rgba(173,30,24,0.25);
+      --theme-primary: #AD1E18; --theme-time: #43638C; --theme-loc: #43638C; --theme-battle: #AD1E18;
+      --theme-scroll: rgba(173, 30, 24, 0.4);
+    }
+    .draggable-wrapper[data-theme="max-night"] {
+      --text-main: #EAE0E0; --text-muted: rgba(234,224,224,0.55);
+      --bg-header: linear-gradient(90deg, #2A1C20, #3B2A2F); --bg-sidebar: rgba(24,17,19,0.96);
+      --bg-content: linear-gradient(135deg, #0F0A0C, #181113); --bg-card: rgba(173,30,24,0.08); --bg-soft: rgba(173,30,24,0.05);
+      --border-color: rgba(173,30,24,0.35); --border-dashed: rgba(173,30,24,0.45);
+      --theme-primary: #AD1E18; --theme-time: #EAE0E0; --theme-loc: #EAE0E0; --theme-battle: #AD1E18;
+      --theme-scroll: rgba(173, 30, 24, 0.3);
+    }
+
+    /* 布局与通用组件 */
+    .drag-handle, .header-title, .header-actions, .icon-btn, .collapse-btn, .row-inline, .sub-tab-btn, .feel-header, .drive-item, .drive-label, .ticker-wrap, .ticker-label { display: flex; align-items: center; }
+    .drag-handle { justify-content: space-between; gap: 8px; padding: 12px 14px; background: var(--bg-header); border-bottom: 1px solid var(--border-color); user-select: none; }
+    .header-title { flex: 1; justify-content: center; gap: 6px; font-weight: bold; letter-spacing: 1px; color: var(--theme-primary); }
+    .header-actions { gap: 6px; }
+    .icon-btn, .collapse-btn { justify-content: center; border: 1px solid var(--border-color); background: var(--bg-soft); color: var(--theme-primary); border-radius: 4px; padding: 4px 9px; font-family: inherit; font-weight: bold; cursor: pointer; line-height: 1.2; font-size: 14px; }
+
+    .main-layout { flex: 1 1 auto; display: flex; width: 100%; height: 100%; overflow: hidden; }
+    .main-layout.collapsed { display: none; }
+
+    .sidebar { flex: 0 0 90px; display: flex; flex-direction: column; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); }
+    .identity-card-container { flex: 0 0 auto; padding: 9px 5px; border-bottom: 2px solid var(--theme-primary); cursor: pointer; }
+    .identity-card { width: 100%; height: 70px; border-radius: 6px; border: 1px solid var(--theme-primary); background: var(--bg-soft); display: flex; align-items: center; justify-content: center; transition: background 0.3s ease; }
+    .identity-card:hover { background: var(--bg-card); }
+    .id-avatar { font-size: 34px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
+
+    .tab-scroll { flex: 1 1 auto; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+    .tab-btn { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 13px 2px; border: 0; border-bottom: 1px solid var(--border-color); background: transparent; color: var(--text-main); font-family: inherit; font-size: 13px; cursor: pointer; position: relative; }
+    .tab-btn.active { background: var(--bg-soft); color: var(--theme-primary); font-weight: bold; }
+    .tab-btn.active::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--theme-primary); }
+    .tab-emoji { font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+    .sidebar-group { display: flex; flex-direction: column; }
+
+    .draggable-wrapper[data-role="max"] .xiumin-only, .draggable-wrapper[data-role="max"] .xiumin-only-view { display: none !important; }
+    .draggable-wrapper[data-role="xiumin"] .max-only, .draggable-wrapper[data-role="xiumin"] .max-only-view { display: none !important; }
+
+    .content-area { flex: 1 1 auto; padding: 18px; background: var(--bg-content); overflow-y: auto; overflow-x: hidden; }
+    .tab-content, .sub-tab-content { display: none; }
+    .tab-content.active { display: flex; flex-direction: column; width: 100%; }
+    .sub-tab-content.active { display: block; flex: 1 1 auto; }
+
+    .section { flex: 0 0 auto; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card); padding: 17px; margin-bottom: 16px; }
+    .section.transparent-bg { background: transparent; border: 0; padding: 4px 2px; margin-bottom: 16px; }
+    .section.flex-fill { flex: 1 1 auto; display: flex; flex-direction: column; margin-bottom: 0; }
+    .section-title { flex: 0 0 auto; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed var(--border-dashed); color: var(--theme-primary); font-weight: bold; font-size: 15px; text-transform: uppercase; display: flex; align-items: center; gap: 8px;}
+
+    .row { display: flex; flex-direction: column; align-items: stretch; gap: 5px; margin-bottom: 12px; }
+    .row-inline { justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .label { color: var(--text-main); opacity: 0.82; font-size: 14px; }
+    .value { color: var(--theme-primary); font-weight: bold; font-size: 15px; text-align: right; word-break: break-all; }
+    .divider { border: 0; border-top: 1px dashed var(--border-dashed); margin: 14px 0; }
+
+    progress { width: 100%; height: 15px; border: 0; border-radius: 8px; overflow: hidden; background: var(--bg-soft); }
+    progress::-webkit-progress-bar { background: var(--bg-soft); border-radius: 8px; }
+    progress::-webkit-progress-value { background: var(--theme-primary); border-radius: 8px; transition: width 0.3s ease; }
+    progress.progress-alert::-webkit-progress-value { background: var(--theme-battle); }
+
+    .sub-tab-container { flex: 0 0 auto; display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 12px; }
+    .sub-tab-btn { flex: 1 1 0; justify-content: center; gap: 6px; padding: 10px 0; color: var(--text-muted); border-bottom: 2px solid transparent; font-size: 14px; font-weight: bold; cursor: pointer; }
+    .sub-tab-btn.active { color: var(--theme-primary); border-bottom-color: var(--theme-primary); }
+
+    .fold-list, .drive-list, .forum-list, .console-log { display: flex; flex-direction: column; }
+    .fold-list { gap: 10px; }
+    .fold-item { border: 1px solid var(--theme-primary); border-radius: 6px; background: var(--bg-card); overflow: hidden; }
+    .fold-item summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 13px; color: var(--theme-primary); background: var(--bg-soft); font-weight: bold; cursor: pointer; list-style: none; user-select: none; }
+    .fold-item summary::-webkit-details-marker { display: none; }
+    .item-desc { padding: 12px 13px; border-top: 1px dashed var(--theme-primary); color: var(--text-main); font-size: 14px; line-height: 1.45; }
+
+    .equip-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 12px; }
+    .equip-slot { border: 1px solid var(--theme-primary); border-radius: 6px; background: var(--bg-card); color: var(--theme-primary); padding: 10px 4px; text-align: center; display: flex; flex-direction: column; justify-content: center;}
+    .slot-label { font-size: 12px; line-height: 1.1; margin-bottom: 5px; opacity: 0.7; font-weight: bold;}
+    .slot-item { font-size: 13px; font-weight: bold; word-break: break-all; }
+
+    .flat-item { border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-soft); padding: 10px 12px; margin-bottom: 8px; font-size: 13px; line-height: 1.4; color: var(--text-main); }
+    .flat-item .flat-title { font-weight: bold; color: var(--theme-primary); margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+
+    .console-wrapper { flex: 1 1 auto; display: flex; flex-direction: column; border: 1px solid var(--theme-primary); border-radius: 8px; background: var(--bg-card); color: var(--text-main); padding: 12px; }
+    .console-header { flex: 0 0 auto; color: var(--theme-primary); border-bottom: 1px dashed var(--theme-primary); padding-bottom: 8px; margin-bottom: 8px; font-size: 13px; font-weight: bold; }
+    .console-log { gap: 7px; font-size: 13px; line-height: 1.4; word-break: break-all; max-height: 400px; overflow-y: auto; }
+    .sys-tag { display: inline-block; padding: 0 4px; margin-right: 4px; background: var(--theme-primary); color: #fff; font-size: 12px; font-weight: bold; }
+
+    .forum-meta-header { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 2px solid var(--theme-primary); font-size: 13px; }
+    .forum-meta-header .row-inline { margin-bottom: 0; }
+    .forum-list { gap: 12px; }
+    .forum-post { border-bottom: 1px dashed var(--border-dashed); padding-bottom: 10px; color: var(--text-main); }
+    .forum-title { color: var(--theme-primary); font-weight: bold; font-size: 15px; margin-bottom: 5px; word-break: break-all; }
+    .forum-meta { display: flex; justify-content: space-between; gap: 8px; color: var(--text-muted); font-size: 12px; margin-bottom: 6px; }
+    .forum-summary { font-size: 13px; line-height: 1.45; word-break: break-all; }
+    .forum-reply { margin-top: 6px; padding: 8px; background: var(--bg-soft); border-radius: 4px; font-size: 12px; line-height: 1.4; }
+    .forum-reply-user { color: var(--theme-primary); font-weight: bold; margin-right: 4px; }
+    .empty-text { padding: 16px; text-align: center; color: var(--theme-battle); font-size: 14px; font-weight: bold; letter-spacing: 1px; font-style: italic; }
+
+    .galaxy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .galaxy-card { border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); padding: 12px; display: flex; flex-direction: column; gap: 6px; transition: all 0.3s ease; }
+    .galaxy-card .g-name { font-weight: bold; color: var(--theme-primary); font-size: 15px; }
+    .galaxy-card .g-stat { font-size: 13px; color: var(--theme-loc); font-weight: bold; }
+    .galaxy-card .g-desc { font-size: 12px; color: var(--text-muted); line-height: 1.3; }
+    .galaxy-card.alert { border-color: var(--theme-battle); background: var(--bg-soft); }
+    .galaxy-card.alert .g-name, .galaxy-card.alert .g-stat { color: var(--theme-battle); }
+    .galaxy-card.alert .g-stat { animation: pulse-alert 2s infinite; }
+    .galaxy-card.offline { opacity: 0.5; }
+    .galaxy-card.offline .g-stat { color: var(--text-muted); }
+    @keyframes pulse-alert { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .time-center-layout { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 20px; padding: 10px 0; }
+    .time-center-layout .time-emoji { font-size: 48px; line-height: 1; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.15)); color: var(--theme-primary); }
+    .time-center-layout .micro-loc { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: bold; color: var(--theme-loc); letter-spacing: 1px; text-align: center; line-height: 1.4; }
+
+    .log-case { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed var(--border-dashed); }
+    .log-case:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .log-line { display: flex; gap: 6px; margin-bottom: 4px; font-size: 12px; line-height: 1.4; }
+    .log-tag { flex: 0 0 auto; font-weight: bold; }
+    .log-text { flex: 1; word-break: break-all; }
+    .tag-alert { color: var(--theme-battle); } .tag-uknow { color: var(--theme-loc); } .tag-max { color: var(--theme-primary); } .tag-red { color: #888; }
+
+    .node-card { border: 1px solid var(--theme-primary); border-radius: 6px; background: var(--bg-card); padding: 12px; margin-bottom: 10px; }
+    .node-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px dashed var(--theme-primary); padding-bottom: 6px; }
+    .node-name { font-weight: bold; color: var(--theme-primary); font-size: 14px; }
+    .node-status { font-size: 12px; color: var(--theme-battle); font-weight: bold; }
+    .node-detail { font-size: 13px; color: var(--text-main); line-height: 1.4; }
+    .node-remark { margin-top: 6px; padding-top: 6px; border-top: 1px dotted var(--border-dashed); font-size: 12px; color: var(--text-muted); font-style: italic; }
+
+    .stack-bar-container { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .stack-bar { display: flex; width: 100%; height: 18px; border-radius: 9px; overflow: hidden; background: var(--bg-soft); border: 1px solid var(--border-color); }
+    .stack-segment { height: 100%; transition: width 0.4s ease; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+    .stack-legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--text-main); }
+    .legend-item { display: flex; align-items: center; gap: 4px; }
+    .legend-color { width: 10px; height: 10px; border-radius: 2px; }
+    .color-feed { background-color: #1565C0; } .color-market { background-color: #00695C; } .color-hide { background-color: #AD1E18; } .color-self { background-color: #43638C; }
+
+    .ticker-wrap { flex: 0 0 28px; width: 100%; background: var(--bg-header); border-top: 1px solid var(--border-color); overflow: hidden; padding: 0 10px; }
+    .ticker-label { flex: 0 0 auto; font-size: 12px; font-weight: bold; color: var(--theme-battle); padding-right: 10px; border-right: 1px solid var(--border-color); margin-right: 10px; white-space: nowrap; gap: 4px; }
+    .ticker-content { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .ticker-text { display: inline-block; font-size: 12px; color: var(--text-main); width: 100%; overflow: hidden; text-overflow: ellipsis; }
+
+    .id-badge { border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; background: var(--bg-card); position: relative; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .id-badge::before { content: attr(data-watermark); position: absolute; right: 10px; bottom: 5px; font-size: 65px; font-weight: bold; color: var(--theme-primary); opacity: 0.12; line-height: 1; z-index: 0; pointer-events: none; transition: color 0.3s ease, opacity 0.3s ease; }
+    .id-badge[data-watermark="HC"]::before { color: var(--theme-battle); opacity: 0.15; }
+    .id-badge .row-inline { position: relative; z-index: 1; margin-bottom: 10px; }
+    .id-badge .row-inline:last-child { margin-bottom: 0; }
+    .id-badge-title { text-align: center; font-weight: bold; color: var(--theme-primary); font-size: 14px; margin-bottom: 14px; letter-spacing: 1px; border-bottom: 1px dashed var(--border-dashed); padding-bottom: 8px; position: relative; z-index: 1; }
+
+    .psycho-card { background: var(--bg-card); border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border-color); }
+    .psycho-card-title { font-size: 12px; color: var(--text-muted); font-style: italic; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .psycho-card-title::before { content: ""; display: block; width: 3px; height: 12px; background: var(--theme-primary); border-radius: 2px; }
+    .feel-header { justify-content: space-between; margin-bottom: 8px; }
+    .feel-tag { background: var(--theme-primary); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+    .feel-text { font-size: 13px; line-height: 1.5; color: var(--text-main); }
+
+    .thought-core { text-align: center; padding: 10px 0; }
+    .thought-icons { font-size: 28px; margin-bottom: 8px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
+    .thought-text { font-size: 18px; font-weight: bold; color: var(--theme-primary); margin-bottom: 6px; letter-spacing: 1px; }
+    .thought-sub { font-size: 12px; color: var(--text-muted); }
+
+    .drive-list { gap: 12px; }
+    .drive-item { gap: 10px; }
+    .drive-label { flex: 0 0 60px; font-size: 13px; color: var(--text-main); gap: 4px; font-weight: bold; }
+    .drive-bar-wrap { flex: 1; height: 6px; background: var(--bg-soft); border-radius: 3px; overflow: hidden; border: 1px solid var(--border-color); }
+    .drive-bar { height: 100%; background: var(--theme-primary); border-radius: 3px; transition: width 0.3s ease; }
+    .drive-val { flex: 0 0 30px; text-align: right; font-size: 14px; font-weight: bold; color: var(--theme-primary); font-family: monospace; }
+  </style>
+
+  <script type="module">
+    const state = { role: 'xiumin', time: 'day', lastData: null };
+    const tabMapping = {
+      'tab-xiumin-task': 'tab-max-api', 'tab-xiumin-status': 'tab-max-console', 'tab-xiumin-def': 'tab-max-anchor',
+      'tab-battle': 'tab-max-eval', 'tab-xiumin-social': 'tab-max-forum', 'tab-max-api': 'tab-xiumin-task',
+      'tab-max-console': 'tab-xiumin-status', 'tab-max-anchor': 'tab-xiumin-def', 'tab-max-eval': 'tab-battle',
+      'tab-max-forum': 'tab-xiumin-social'
+    };
+
+    const getStatData = () => _.get(typeof getAllVariables === 'function' ? getAllVariables() : {}, 'stat_data', {});
+
+    /* 提取公共辅助取值函数，精简代码体积 */
+    const g = (sd, path, def='-') => _.get(sd, path, def);
+    const gn = (sd, path, def=0) => Number(_.get(sd, path, def)) || def;
+
+    function applyTheme() {
+      $('#draggable-wrapper').attr('data-role', state.role).attr('data-theme', `${state.role}-${state.time}`);
+      $('#theme-toggle-btn').text(state.time === 'day' ? '🌙' : '☀️');
+      $('#identity-avatar').text(state.role === 'xiumin' ? '❄️' : '🔴');
+      $('#header-title-text').text(state.role === 'xiumin' ? '终端面板' : 'SYS_TERMINAL');
+    }
+
+    function switchTab(target) {
+      $('.tab-btn').removeClass('active'); $(`.tab-btn[data-target="${target}"]`).addClass('active');
+      $('.tab-content').removeClass('active'); $(`#${target}`).addClass('active');
+    }
+
+    function switchSubTab(parent, target) {
+      $(`.sub-tab-btn[data-parent="${parent}"]`).removeClass('active');
+      $(`.sub-tab-btn[data-parent="${parent}"][data-target="${target}"]`).addClass('active');
+      $(`.sub-tab-content[data-parent="${parent}"]`).removeClass('active');
+      $(`#${target}`).addClass('active');
+    }
+
+    function renderAutoText(sd) {
+      $('[data-path]').each(function() {
+        const fb = $(this).data('default') || '-'; const v = g(sd, $(this).data('path'), fb);
+        $(this).text(v === undefined || v === null || v === '' ? fb : v);
+      });
+      $('[data-prog]').each(function() { $(this).val(gn(sd, $(this).data('prog'))); });
+    }
+
+    function renderTimeAndLocation(sd) {
+      const t = g(sd, '当前时空.时间', {});
+      const phaseMap = { '夜晚': 'NIGHT', '白天': 'DAY', '清晨': 'MORNING', '黄昏': 'DUSK' };
+      $('#val-full-date').text(`${t.年份||'-'}-${String(t.月||'-').padStart(2,'0')}-${String(t.日||'-').padStart(2,'0')}`);
+      $('#val-time-phase').text(phaseMap[t.时间段] || String(t.时间段||'-').toUpperCase());
+      $('#val-exact-time').text(`${String(t.时??'00').padStart(2,'0')}:${String(t.分??'00').padStart(2,'0')} (FST)`);
+
+      let gx = g(sd, '当前时空.星系'), p = g(sd, '当前时空.星球'), pl = g(sd, '当前时空.地点'), d = g(sd, '当前时空.具体地点');
+      if (state.role === 'max' && g(sd, '沈昌珉.显像.当前显像状态', '未显像') === '未显像') {
+        gx = '联邦核心数据层'; p = '“红”的深层意识空间'; pl = '数据海'; d = '观测节点';
+      }
+
+      $('#val-loc-galaxy').text(gx); $('#val-loc-planet').text(p);
+      $('#val-location-detail, #val-xiu-full-loc').text(`${gx} / ${p} / ${pl} / ${d}`);
+      $('#val-xiu-time-emoji').text(t.时间段 === '夜晚' ? '🌙' : '☀️');
+      $('#val-xiumin-loc-name').text(`${p} ${pl}「${d}」`);
+
+      const tac = g(sd, '当前时空.战术情报', {}), secLevel = tac.安保级别 || '未知';
+      $('#val-loc-security').text(secLevel).css('color', secLevel.includes('高') || secLevel.includes('严') ? 'var(--theme-battle)' : 'var(--theme-primary)');
+      $('#val-loc-interference').text(tac.环境干扰说明 || '无特殊干扰');
+      $('#xiumin-loc-details').html(`<details class="fold-item" open><summary><span>地形与环境侦测</span><span>▼</span></summary><div class="item-desc">${tac.地形侦测描述 || '暂无详细地形数据'}</div></details>`);
+
+      const sectors = g(sd, '星系状态监控', {}), sKeys = Object.keys(sectors);
+      $('#max-galaxy-grid').html(sKeys.length ? sKeys.map(k => {
+        const s = sectors[k], tag = s.状态标签 || '[NORMAL]', cls = `galaxy-card ${tag.includes('ALERT')||tag.includes('ANOMALY')?'alert':''} ${tag.includes('OFFLINE')?'offline':''}`;
+        return `<div class="${cls}"><div class="g-name">${k}</div><div class="g-stat">${tag}</div><div class="g-desc">Sync: ${s.同步率||0}%<br>${s.简述||'-'}</div></div>`;
+      }).join('') : '<div class="empty-text" style="grid-column:span 2;">[暂无星系监控数据]</div>');
+    }
+
+    function renderXiumin(sd) {
+      const bal = gn(sd, '金珉锡.体内平衡度', 50), pwr = gn(sd, '金珉锡.异能输出');
+
+      $('#val-power-state-tag').text(pwr === 0 ? "压制 / 休眠" : (pwr < 50 ? "极寒冰霜" : (pwr < 90 ? "熵减视界" : "时空锁相")));
+      $('#val-power-icon').text(pwr === 0 ? "💤" : (pwr < 50 ? "❄️" : (pwr < 90 ? "🧊" : "⏳")));
+      $('#val-power-num').text(pwr);
+
+      $('#val-body-tag').text(bal > 80 ? "稳定" : (bal >= 40 ? "警告" : (bal >= 10 ? "危险" : "致命")));
+      $('#val-body-state').text(bal > 80 ? "机能完好，无明显异常。" : (bal >= 40 ? "出现冻伤、血液流速减慢等侵蚀症状。" : (bal >= 10 ? "局部结晶化，肉体濒临崩溃边缘。" : "生命体征微弱，濒临绝对冻结。")));
+      $('#val-balance-num').text(bal + '%').css('color', bal < 40 ? 'var(--theme-battle)' : 'var(--theme-primary)');
+      $('#val-body-tag').css('background', bal < 40 ? 'var(--theme-battle)' : 'var(--theme-primary)');
+      $('#rpg-prog-hp').val(bal).toggleClass('progress-alert', bal < 40);
+
+      $('#side-task-container').toggle(!!g(sd, '剧情状态.找到定位仪', false));
+
+      const duty = gn(sd, '金珉锡.责任值', 80), favor = gn(sd, '金珉锡.好感度'), diff = duty - favor;
+      let pTag = "完整", pDesc = "绝对理智，防备极深，责任压倒一切。潜意识的冰壳正牢牢封锁着任何多余的情感波动。", pIco = "🛡️ 🧊", pFoc = "完成任务，找回同伴", pSub = "理智主导 99%";
+      if (diff < -10) { pTag = "粉碎"; pDesc = "防线崩溃，彻底接纳。对温度的本能眷恋越过责任，潜意识选择沉溺。"; pIco = "❤️ 🔥"; pFoc = "汲取温度，靠近他"; pSub = "本能驱动 90%"; }
+      else if (diff <= 40) { pTag = "裂痕"; pDesc = "理智仍在抗拒，但本能与潜意识已开始动摇。坚冰之下，有什么正在融化。"; pIco = "⚠️ 💧"; pFoc = "抗拒与渴望的拉扯"; pSub = `内部冲突 ${100-diff}%`; }
+
+      $('#val-psy-tag').text(pTag); $('#val-psy-desc').text(pDesc); $('#val-psy-icon').text(pIco); $('#val-psy-focus').text(pFoc); $('#val-psy-sub').text(pSub);
+      $('#bar-duty').css('width', `${duty}%`); $('#val-duty').text(duty);
+      $('#bar-favor').css('width', `${favor}%`); $('#val-favor').text(favor);
+
+      const fc = g(sd, '金珉锡.当前FC状态', 'HC');
+      const isHC = fc.includes('HC'), isFake = fc === '伪FC', isRe = fc.includes('重编码');
+      $('#id-badge-card').attr('data-watermark', isHC ? 'HC' : 'FC');
+      $('#val-cert-status').text(isHC||isFake ? '[ 未注册 ]' : '[ 已注册 ]').css('color', isHC ? 'var(--theme-battle)' : (isFake ? 'var(--theme-loc)' : 'var(--theme-primary)'));
+
+      if(g(sd, '金珉锡.Max掉马状态', false)) $('#row-exposed').hide();
+      else { $('#row-exposed').show(); $('#val-max-exposed-tag').text('[安全 / 未锁定]').css('color', 'var(--theme-primary)'); }
+
+      let ms = g(sd, '金珉锡.装备与武装.机甲展开态');
+      $('#val-mecha-state').text(ms === '高维折叠' ? '饰品态' : (ms === '未展开' ? '原石形态' : ms));
+
+      const acc = Object.entries(g(sd, '金珉锡.装备与武装.机甲饰品槽', {}));
+      $('#equip-grid').html(acc.length ? acc.map(([l, i]) => `<div class="equip-slot"><div class="slot-label">[${l}]</div><div class="slot-item">${i}</div></div>`).join('') : '<div class="empty-text" style="grid-column:span 3;padding:8px;">[无饰品装配]</div>').show();
+
+      /* ===== 核心修改：动态读取 HC 编码并拼接在手环描述中 ===== */
+      const currentCode = g(sd, '金珉锡.伪装身份.注册编号', '未知编码');
+      const bag = Object.entries(g(sd, '金珉锡.装备与武装.背包物品', {}));
+
+      $('#list-bag').html(bag.length ? bag.map(([n, i]) => {
+        let displayDesc = i.描述 || '无说明';
+
+        // 如果物品名字包含“HC手环”，我们就拦截它，加上变量里的真实编号
+        if (n.includes('HC手环')) {
+          displayDesc = `HC编码: ${currentCode}`;
+        }
+
+        return `<div class="flat-item">
+                  <div class="flat-title">
+                    <span>${n}</span>
+                    <span style="opacity:0.72;font-size:12px;">x${i.数量||1}</span>
+                  </div>
+                  <div>${displayDesc}</div>
+                </div>`;
+      }).join('') : '<div class="empty-text">[载荷为空]</div>');
+
+      const team = Object.entries(g(sd, '队友情报', {}));
+      $('#teammate-container').html(team.length ? team.map(([n, i]) => `<details class="fold-item"><summary><span>${n}</span><span>▼</span></summary><div class="item-desc"><div class="row-inline"><span class="label">状态:</span><span class="value">${i.状态==='离场'&&i.位置?`离场 (${i.位置})`:i.状态||'-'}</span></div><div class="row-inline"><span class="label">动向:</span><span class="value">${i.当前动向||'-'}</span></div><div class="row-inline"><span class="label">伪装身份:</span><span class="value">${g(i,'详细情报.伪装身份')}</span></div><div class="row-inline"><span class="label">机甲动向:</span><span class="value">${g(i,'详细情报.机甲动向')}</span></div><hr class="divider" style="margin:8px 0;"><div class="row-inline"><span class="label">觉醒节点:</span><span class="value">${g(i,'详细情报.觉醒节点')}</span></div><div class="row-inline"><span class="label">能力解放度:</span><span class="value">${g(i,'详细情报.能力解放度')}</span></div><div class="row-inline"><span class="label">FC状态:</span><span class="value">${g(i,'详细情报.FC状态')}</span></div><div class="row-inline"><span class="label">反噬度:</span><span class="value">${gn(i,'详细情报.肉体反噬度')}%</span></div></div></details>`).join('') : '<div class="empty-text">[频率未共鸣 / 信号被切断]</div>');
+
+      const others = Object.entries(g(sd, '社交情报.其他羁绊', {}));
+      $('#other-contacts-container').html(others.length ? others.map(([n, i]) => `<details class="fold-item"><summary><span style="display:flex;align-items:center;gap:6px;"><span style="font-size:16px;">${i.头像||'👤'}</span> ${n} <span style="font-size:12px;opacity:0.8;">[${i.态度||'未知'}]</span></span><span>▼</span></summary><div class="item-desc"><div class="row-inline"><span class="label">状态:</span><span class="value">${i.状态==='离场'&&i.位置?`离场 (${i.位置})`: (i.位置?`${i.状态||'-'} (${i.位置})`:i.状态||'-')}</span></div><div class="row-inline"><span class="label">动向:</span><span class="value">${i.动向||'-'}</span></div><hr class="divider" style="margin:8px 0;"><div class="row-inline"><span class="label">阵营:</span><span class="value">${i.阵营||'-'}</span></div><div class="row-inline"><span class="label">身份:</span><span class="value">${i.身份||'-'}</span></div><div class="row-inline"><span class="label">当前态度:</span><span class="value" style="color:${i.当前态度==='敌对'?'var(--theme-battle)':(i.当前态度==='友好'?'var(--theme-primary)':'var(--theme-loc)')};">${i.当前态度||'中立'}</span></div><div class="row"><span class="label">好感度 (${i.好感度||0}):</span><progress max="100" value="${i.好感度||0}"></progress></div><hr class="divider" style="margin:8px 0;">${i.特质?`<div class="row" style="margin-bottom:8px;"><span class="label">特质:</span><div style="font-size:13px;margin-top:4px;line-height:1.4;">${i.特质}</div></div>`:''}${i.近期经历?`<div class="row"><span class="label">近期经历:</span><div style="font-size:13px;margin-top:4px;line-height:1.4;color:var(--text-muted);">${i.近期经历}</div></div>`:''}</div></details>`).join('') : '<div class="empty-text">[无其他关系记录]</div>');
+    }
+
+    function renderMax(sd) {
+      $('#prog-blindspot').val(gn(sd, '沈昌珉.系统权限.盲区覆盖率', 85)); $('#prog-override').val(gn(sd, '沈昌珉.系统权限.覆写权限', 100));
+      const logs = Object.values(g(sd, '沈昌珉.干预日志', {}));
+      $('#intervention-log-container').html(logs.length ? logs.map(l => `<div class="log-case"><div class="log-line"><span class="log-tag tag-alert">[SYS_ALERT]</span><span class="log-text">${l.alert||'-'}</span></div><div class="log-line"><span class="log-tag tag-uknow">[Uknow_EVAL]</span><span class="log-text">${l.uknow_eval||'-'}</span></div><div class="log-line"><span class="log-tag tag-max">[Max_EVAL]</span><span class="log-text">${l.max_eval||'-'}</span></div><div class="log-line"><span class="log-tag tag-red">[RED_FINAL]</span><span class="log-text">${l.red_final||'-'}</span></div></div>`).join('') : '<div class="empty-text" style="padding-top:30px;">[底层静默]</div>');
+
+      const nodes = Object.entries(g(sd, '沈昌珉.全局观测节点', {}));
+      $('#global-nodes-list').html(nodes.length ? nodes.map(([k, n]) => `<div class="node-card"><div class="node-header"><span class="node-name">${n.名称||k}</span><span class="node-status">${n.状态||'-'}</span></div><div class="node-detail">定位: ${n.定位||'-'}</div><div class="node-remark">Max 备注: ${n.备注||'-'}</div></div>`).join('') : '<div class="empty-text">[处于盲区 / 算力未覆盖]</div>');
+
+      const pm = gn(sd, '沈昌珉.观测与干涉.当前输入功率');
+      let f = Math.min(60, pm > 0 ? (pm > 50 ? 40 : 25) : 5), m = 40, h = 25, s = Math.max(5, 100 - f - m - h);
+      if (100-f-m-h < 5) h -= (5-(100-f-m-h));
+      $('#stack-feed').css('width', `${f}%`).text(f>10?`${f}%`:''); $('#stack-market').css('width', `${m}%`).text(m>10?`${m}%`:'');
+      $('#stack-hide').css('width', `${h}%`).text(h>10?`${h}%`:''); $('#stack-self').css('width', `${s}%`).text(s>10?`${s}%`:'');
+      $('#val-pct-feed').text(`${f}%`); $('#val-pct-market').text(`${m}%`); $('#val-pct-hide').text(`${h}%`); $('#val-pct-self').text(`${s}%`);
+      $('#prog-focus').val(Math.min(100, gn(sd, '沈昌珉.显像.算力占用率') + pm + 15));
+
+      const bal = gn(sd, '金珉锡.体内平衡度', 50), px = gn(sd, '金珉锡.异能输出');
+      const temp = 36.5 - ((100-bal)*0.15) - (px*0.2) + (pm*0.25);
+      $('#val-obs-temp').text(`${temp.toFixed(1)} °C`).css('color', temp<30?'var(--theme-battle)':'var(--theme-primary)');
+      $('#val-obs-power').text(`${px.toFixed(1)}%`); $('#val-obs-balance').text(`${bal.toFixed(1)}%`);
+
+      const lr = Math.min(100, px*1.5 + (100-bal)*0.2);
+      $('#prog-law-reject').val(lr).toggleClass('progress-alert', lr > 50);
+      $('#prog-heat-convert').val(Math.min(100, pm*2));
+
+      let sys = '[STABLE] 物理指标稳定', sc = 'var(--theme-primary)';
+      if(bal<40&&pm===0){sys='[WARNING] 肉体侵蚀加剧，无外部热源';sc='var(--theme-loc)';}
+      else if(bal<40&&pm>0){sys='[ACTIVE] 麦克斯韦妖运行中：强行遏制崩解';sc='var(--theme-loc)';}
+      if(bal<10){sys='[CRITICAL] 目标濒临绝对冻结';sc='var(--theme-battle)';}
+      if(px>80){sys='[ALERT] 极高能级法则排斥警告';sc='var(--theme-battle)';}
+      $('#val-intervention-status').text(sys).css('color', sc);
+      $('#val-obs-shell').text(g(sd, '金珉锡.冰壳状态'));
+
+      const cp = g(sd, '沈昌珉.终局决断.核心编译分支', '未启动');
+      if(cp==='未启动'||!cp){ $('#compile-empty-state').show(); $('#compile-active-state').hide(); }
+      else { $('#compile-empty-state').hide(); $('#compile-active-state').show(); }
+
+      const fd = g(sd, '暗网论坛数据', {});
+      $('#val-forum-platform').text(fd.平台名称||'none'); $('#val-forum-board').text(fd.当前板块||'-'); $('#val-forum-time').text(fd.数据快照时间||'-');
+      const posts = Object.entries(g(fd, '帖子列表', {}));
+      $('#forum-tab-hot-list').html(posts.length ? posts.map(([id, p]) => `<div class="forum-post"><div class="forum-title">${p.标题||id}</div><div class="forum-meta"><span>${p.发帖人||'匿名'}</span><span>${p.热度||0} ${p.热度>10000?'🔥🔥🔥':(p.热度>5000?'🔥🔥':'🔥')}</span></div><div class="forum-summary">${p.内容摘要||'-'}</div>${p.回复列表 ? `<div class="forum-replies">${Object.entries(p.回复列表).map(([_,r])=>`<div class="forum-reply"><span class="forum-reply-user">${r.用户||'匿名'}:</span><span>${r.内容||''}</span></div>`).join('')}</div>`:''}</div>`).join('') : '<div class="empty-text">[无连接数据]</div>');
+    }
+
+    function renderConsole(sd) {
+      if (!state.lastData) { state.lastData = _.cloneDeep(sd); return; }
+      const changes = [];
+      function compare(o, n, p) {
+        if (_.isPlainObject(o) && _.isPlainObject(n)) Object.keys(n).forEach(k => compare(o[k], n[k], p ? `${p}.${k}` : k));
+        else if (!_.isEqual(o, n)) changes.push(`<div class="console-line"><span class="sys-tag">SYS</span>${p} = ${_.isObject(n)?JSON.stringify(n):n}</div>`);
+      }
+      compare(state.lastData, sd, 'stat_data'); state.lastData = _.cloneDeep(sd);
+      if (changes.length > 0) { $('#data-console-log').append(changes.join('')); const el = document.getElementById('data-console-log'); if(el) el.scrollTop = el.scrollHeight; }
+    }
+
+    function renderTickerText(sd) {
+      const ua = gn(sd, '敌对势力监控.Uknow警觉度');
+      $('#news-ticker').html(`<span>${ua>80?'[最高警告] 已锁定当前坐标，全频段静默生效中...':(ua>50?'[警报] 发现异常频率波动，官方探针正在接近...':'联邦通讯网[FHCL]正常运行中。暗网[HOT]节点连接稳定。')}</span>`);
+    }
+
+    function populateCharacterData() {
+      try { const sd = getStatData(); renderAutoText(sd); renderTimeAndLocation(sd); renderXiumin(sd); renderMax(sd); renderConsole(sd); if(!state.lastData) renderTickerText(sd); }
+      catch (err) { console.error("渲染终端面板数据时出错:", err); }
+    }
+
+    async function init() {
+      try {
+        if (typeof waitGlobalInitialized === 'function') await waitGlobalInitialized('Mvu');
+        const h = new Date().getHours(); state.time = h >= 7 && h < 21 ? 'day' : 'night';
+        applyTheme(); populateCharacterData();
+        if (typeof eventOn === 'function' && typeof Mvu !== 'undefined') eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, populateCharacterData);
+
+        $('#identity-card-container').on('click', function() {
+          const cur = $('.tab-btn.active').data('target'); state.role = state.role === 'xiumin' ? 'max' : 'xiumin'; applyTheme();
+          if (cur !== 'tab-time' && cur !== 'tab-location' && tabMapping[cur]) switchTab(tabMapping[cur]);
+          renderTimeAndLocation(getStatData());
+        });
+        $('#theme-toggle-btn').on('click', function() { state.time = state.time === 'day' ? 'night' : 'day'; applyTheme(); });
+        $('#collapse-btn').on('click', function() {
+          const w = $('#draggable-wrapper').toggleClass('collapsed'), c = w.hasClass('collapsed');
+          $('#main-layout').toggleClass('collapsed', c); $('#ticker-wrap').toggle(!c); $(this).text(c ? '[+]' : '[-]');
+        });
+        $('.tab-btn').on('click', function() { switchTab($(this).data('target')); });
+        $('.sub-tab-btn').on('click', function() { switchSubTab($(this).data('parent'), $(this).data('target')); });
+      } catch (err) { console.error("初始化终端面板时出错:", err); }
+    }
+
+    $(function() { typeof errorCatched === 'function' ? errorCatched(init)() : init(); });
+  </script>
+</head>
+
+<body>
+  <div class="draggable-wrapper" id="draggable-wrapper" data-role="xiumin" data-theme="xiumin-day">
+    <div class="drag-handle">
+      <div class="header-actions"><button class="icon-btn" id="theme-toggle-btn" type="button">🌙</button></div>
+      <div class="header-title"><span id="header-title-text">终端面板</span></div>
+      <button class="collapse-btn" id="collapse-btn" type="button">[-]</button>
+    </div>
+
+    <div class="main-layout" id="main-layout">
+      <div class="sidebar">
+        <div class="identity-card-container" id="identity-card-container" title="点击切换视角">
+          <div class="identity-card"><div class="id-avatar" id="identity-avatar">❄️</div></div>
+        </div>
+
+        <div class="tab-scroll">
+          <button class="tab-btn active" data-target="tab-time" type="button"><span class="tab-emoji">🌌</span><span>时空</span></button>
+          <button class="tab-btn" data-target="tab-location" type="button"><span class="tab-emoji">🗺️</span><span>地域</span></button>
+
+          <div class="sidebar-group xiumin-only">
+            <button class="tab-btn" data-target="tab-xiumin-task" type="button"><span class="tab-emoji">📋</span><span>任务</span></button>
+            <button class="tab-btn" data-target="tab-xiumin-status" type="button"><span class="tab-emoji">🧬</span><span>状态</span></button>
+            <button class="tab-btn" data-target="tab-xiumin-def" type="button"><span class="tab-emoji">🛡️</span><span>装备</span></button>
+            <button class="tab-btn" data-target="tab-battle" type="button"><span class="tab-emoji">⚠️</span><span>战局</span></button>
+            <button class="tab-btn" data-target="tab-xiumin-social" type="button"><span class="tab-emoji">👥</span><span>社交</span></button>
+          </div>
+
+          <div class="sidebar-group max-only">
+            <button class="tab-btn" data-target="tab-max-api" type="button"><span class="tab-emoji">📡</span><span>API</span></button>
+            <button class="tab-btn" data-target="tab-max-console" type="button"><span class="tab-emoji">💻</span><span>核心</span></button>
+            <button class="tab-btn" data-target="tab-max-anchor" type="button"><span class="tab-emoji">🔗</span><span>锚点</span></button>
+            <button class="tab-btn" data-target="tab-max-eval" type="button"><span class="tab-emoji">👁️</span><span>观测</span></button>
+            <button class="tab-btn" data-target="tab-max-forum" type="button"><span class="tab-emoji">🕸️</span><span>暗网</span></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-area">
+        <div id="tab-time" class="tab-content active">
+          <div id="time-xiumin-view" class="section transparent-bg flex-fill xiumin-only-view">
+            <div class="section-title">🌌 宇宙时空坐标</div>
+            <div class="time-center-layout">
+              <hr class="divider" style="width:100%;margin:0;">
+              <div class="time-emoji" id="val-xiu-time-emoji">🌙</div>
+              <hr class="divider" style="width:100%;margin:0;">
+              <div class="micro-loc"><span style="font-size:22px;">📍</span><span id="val-xiu-full-loc">-</span></div>
+            </div>
+          </div>
+
+          <div id="time-max-view" class="section transparent-bg max-only-view">
+            <div class="section-title">🌌 SPATIAL_COORDINATES</div>
+            <div class="row-inline"><span class="label">SYS_DATE:</span><span class="value" id="val-full-date">-</span></div>
+            <div class="row-inline"><span class="label">TIME_PHASE:</span><span class="value" id="val-time-phase">-</span></div>
+            <div class="row-inline"><span class="label">SYS_TIME:</span><span class="value" id="val-exact-time">-</span></div>
+            <hr class="divider">
+            <div class="row-inline"><span class="label">SECTOR:</span><span class="value" id="val-loc-galaxy">-</span></div>
+            <div class="row-inline"><span class="label">PLANET_NODE:</span><span class="value" id="val-loc-planet">-</span></div>
+            <div class="row"><span class="label">EXACT_COORD:</span><span class="value" id="val-location-detail">-</span></div>
+          </div>
+        </div>
+
+        <div id="tab-location" class="tab-content">
+          <div id="loc-xiumin-view" class="xiumin-only-view">
+            <div class="section transparent-bg">
+              <div class="section-title">🗺️ 局部战术情报</div>
+              <div class="row-inline"><span class="label">当前区域:</span><span class="value" id="val-xiumin-loc-name">-</span></div>
+              <div class="row-inline"><span class="label">安保级别:</span><span class="value" id="val-loc-security">-</span></div>
+              <div class="row-inline"><span class="label">环境干扰:</span><span class="value" id="val-loc-interference">-</span></div>
+              <hr class="divider">
+              <div class="fold-list" id="xiumin-loc-details"></div>
+            </div>
+          </div>
+
+          <div id="loc-max-view" class="max-only-view">
+            <div class="section transparent-bg">
+              <div class="section-title">🗺️ SECTOR_TOPOLOGY</div>
+              <div class="galaxy-grid" id="max-galaxy-grid"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-xiumin-task" class="tab-content xiumin-only-view">
+          <div class="section transparent-bg">
+            <div class="section-title">📋 主线任务</div>
+            <div class="row"><span class="label">当前进度:</span><span class="value" data-path="剧情状态.主线进度">-</span></div>
+            <div class="row"><span class="label">当前目标:</span><span class="value" data-path="剧情状态.当前主要目标">-</span></div>
+          </div>
+          <div class="section transparent-bg" id="side-task-container" style="display:none;">
+            <div class="section-title">🎯 支线追踪</div>
+            <div class="row-inline"><span class="label">定位仪获取状态:</span><span class="value">已获取</span></div>
+          </div>
+        </div>
+
+        <div id="tab-xiumin-status" class="tab-content xiumin-only-view">
+          <div class="section transparent-bg flex-fill">
+            <div class="sub-tab-container">
+              <div class="sub-tab-btn active" data-parent="xstatus" data-target="sub-xs-psycho">🧠 心理</div>
+              <div class="sub-tab-btn" data-parent="xstatus" data-target="sub-xs-body">🧬 体征</div>
+            </div>
+
+            <div id="sub-xs-psycho" class="sub-tab-content active" data-parent="xstatus">
+              <div class="psycho-card">
+                <div class="psycho-card-title">此刻的焦点</div>
+                <div class="thought-core">
+                  <div class="thought-icons" id="val-psy-icon">🛡️ 🧊</div>
+                  <div class="thought-text" id="val-psy-focus">-</div>
+                  <div class="thought-sub" id="val-psy-sub">-</div>
+                </div>
+              </div>
+
+              <div class="psycho-card">
+                <div class="psycho-card-title">此刻的防线</div>
+                <div class="feel-header"><span class="feel-tag" id="val-psy-tag">完整</span></div>
+                <div class="feel-text" id="val-psy-desc">-</div>
+              </div>
+
+              <div class="psycho-card" style="margin-bottom: 0;">
+                <div class="psycho-card-title">驱动力指标</div>
+                <div class="drive-list">
+                  <div class="drive-item">
+                    <div class="drive-label">🛡️ 责任</div>
+                    <div class="drive-bar-wrap"><div class="drive-bar" id="bar-duty" style="width: 0%;"></div></div>
+                    <div class="drive-val" id="val-duty">0</div>
+                  </div>
+                  <div class="drive-item">
+                    <div class="drive-label">❤️ 眷恋</div>
+                    <div class="drive-bar-wrap"><div class="drive-bar" id="bar-favor" style="width: 0%; background: var(--theme-battle);"></div></div>
+                    <div class="drive-val" id="val-favor" style="color: var(--theme-battle);">0</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="sub-xs-body" class="sub-tab-content" data-parent="xstatus">
+              <div class="psycho-card">
+                <div class="psycho-card-title">当前异能态</div>
+                <div class="thought-core">
+                  <div class="thought-icons" id="val-power-icon">💤</div>
+                  <div class="thought-text" id="val-power-state-tag">压制 / 休眠</div>
+                  <div class="thought-sub">异能输出: <span id="val-power-num">0</span>%</div>
+                </div>
+              </div>
+
+              <div class="psycho-card" style="margin-bottom: 0;">
+                <div class="psycho-card-title">生理负荷监控</div>
+                <div class="feel-header">
+                  <span class="feel-tag" id="val-body-tag">稳定</span>
+                  <span style="font-size:14px; font-weight:bold; color:var(--theme-primary); font-family: monospace;" id="val-balance-num">100%</span>
+                </div>
+                <div class="feel-text" id="val-body-state" style="margin-bottom: 14px;">-</div>
+                <progress id="rpg-prog-hp" max="100" value="0"></progress>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-xiumin-def" class="tab-content xiumin-only-view">
+          <div class="section transparent-bg flex-fill">
+            <div class="sub-tab-container">
+              <div class="sub-tab-btn active" data-parent="xdef" data-target="sub-xd-disguise">🎭 伪装</div>
+              <div class="sub-tab-btn" data-parent="xdef" data-target="sub-xd-equip">🛡️ 装备</div>
+            </div>
+
+            <div id="sub-xd-disguise" class="sub-tab-content active" data-parent="xdef">
+              <div class="id-badge" id="id-badge-card" data-watermark="FC">
+                <div class="id-badge-title">ID卡</div>
+                <div class="row-inline"><span class="label">姓名:</span><span class="value" data-path="金珉锡.伪装身份.姓名">-</span></div>
+                <div class="row-inline"><span class="label">身份:</span><span class="value" data-path="金珉锡.伪装身份.身份">-</span></div>
+                <div class="row-inline"><span class="label">注册地:</span><span class="value" data-path="金珉锡.伪装身份.注册星系">-</span></div>
+                <div class="row-inline"><span class="label">FC编号:</span><span class="value" data-path="金珉锡.伪装身份.注册编号">-</span></div>
+                <hr class="divider" style="margin: 12px 0; border-color: rgba(0,0,0,0.08);">
+                <div class="row-inline" style="margin-bottom: 0;">
+                  <span class="label">认证状态:</span>
+                  <span class="value" id="val-cert-status" style="font-size: 13px;">-</span>
+                </div>
+              </div>
+              <div class="row-inline" id="row-exposed" style="display: none; margin-top: 14px; padding: 0 4px;">
+                <span class="label">掉马评估:</span>
+                <span class="value" id="val-max-exposed-tag">[-]</span>
+              </div>
+            </div>
+
+            <div id="sub-xd-equip" class="sub-tab-content" data-parent="xdef">
+              <div class="psycho-card">
+                <div class="psycho-card-title">【机甲】</div>
+                <div class="row-inline" style="padding:0 4px; margin-bottom:0;"><span class="label">当前状态:</span><span class="value" id="val-mecha-state">-</span></div>
+              </div>
+              <div class="psycho-card">
+                <div class="psycho-card-title">【饰品装配】</div>
+                <div class="equip-grid" id="equip-grid" style="margin-bottom:0;"></div>
+              </div>
+              <div class="psycho-card" style="margin-bottom:0;">
+                <div class="psycho-card-title">【背包载荷】</div>
+                <div class="fold-list" id="list-bag" style="gap:8px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-battle" class="tab-content xiumin-only-view">
+          <div class="section transparent-bg">
+            <div class="section-title">⚠️ 势力威胁监控</div>
+            <div class="row"><span class="label">Uknow警觉度:</span><progress data-prog="敌对势力监控.Uknow警觉度" max="100" value="0"></progress></div>
+            <div class="row"><span class="label">Nexus暴露值:</span><progress data-prog="敌对势力监控.Nexus暴露值" max="100" value="0"></progress></div>
+          </div>
+        </div>
+
+        <div id="tab-xiumin-social" class="tab-content xiumin-only-view">
+          <div class="section transparent-bg flex-fill">
+            <div class="sub-tab-container">
+              <div class="sub-tab-btn active" data-parent="xsocial" data-target="sub-xs-team">👥 队友</div>
+              <div class="sub-tab-btn" data-parent="xsocial" data-target="sub-xs-other">🔗 其他</div>
+            </div>
+            <div id="sub-xs-team" class="sub-tab-content active" data-parent="xsocial"><div class="fold-list" id="teammate-container"></div></div>
+            <div id="sub-xs-other" class="sub-tab-content" data-parent="xsocial"><div class="fold-list" id="other-contacts-container"></div></div>
+          </div>
+        </div>
+
+        <div id="tab-max-api" class="tab-content max-only-view">
+          <div class="section transparent-bg flex-fill">
+            <div class="section-title">📡 UKNOW_AUTHORITY_HOOK</div>
+            <div class="row"><span class="label">Uknow_BLINDSPOT:</span><progress id="prog-blindspot" value="0" max="100"></progress></div>
+            <div class="row"><span class="label">OVERRIDE_AUTHORITY:</span><progress id="prog-override" value="0" max="100"></progress></div>
+            <hr class="divider">
+            <div class="section-title" style="color:var(--theme-loc);font-size:14px;">⚠️ INTERVENTION_LOG</div>
+            <div class="console-wrapper" id="intervention-log-container" style="flex:1 1 auto;max-height:300px;padding:10px;overflow-y:auto;"></div>
+          </div>
+        </div>
+
+        <div id="tab-max-console" class="tab-content max-only-view">
+          <div class="section transparent-bg flex-fill">
+            <div class="section-title">🖲️ CORE_LOGIC_ARRAY</div>
+            <div class="section-title" style="color:var(--theme-loc);font-size:13px;border-bottom:none;margin-bottom:4px;">[COMPUTE_ALLOCATION]</div>
+            <div class="stack-bar-container">
+              <div class="stack-bar">
+                <div class="stack-segment color-feed" id="stack-feed" style="width:0%"></div>
+                <div class="stack-segment color-market" id="stack-market" style="width:0%"></div>
+                <div class="stack-segment color-hide" id="stack-hide" style="width:0%"></div>
+                <div class="stack-segment color-self" id="stack-self" style="width:0%"></div>
+              </div>
+              <div class="stack-legend">
+                <div class="legend-item"><div class="legend-color color-feed"></div>供养Xiumin: <span id="val-pct-feed" style="font-weight:bold;">0%</span></div>
+                <div class="legend-item"><div class="legend-color color-market"></div>维持黑市: <span id="val-pct-market" style="font-weight:bold;">0%</span></div>
+                <div class="legend-item"><div class="legend-color color-hide"></div>瞒报Uknow: <span id="val-pct-hide" style="font-weight:bold;">0%</span></div>
+                <div class="legend-item"><div class="legend-color color-self"></div>自我演算: <span id="val-pct-self" style="font-weight:bold;">0%</span></div>
+              </div>
+            </div>
+            <hr class="divider">
+            <div class="row-inline"><span class="label">显像状态:</span><span class="value" data-path="沈昌珉.显像.当前显像状态">-</span></div>
+            <div class="row-inline"><span class="label">外貌载体:</span><span class="value" data-path="沈昌珉.显像.当前使用外貌">-</span></div>
+            <div class="row-inline"><span class="label">眼眸参数:</span><span class="value" data-path="沈昌珉.显像.眼眸颜色">-</span></div>
+            <div class="row"><span class="label">关注度 Focus Level:</span><progress id="prog-focus" max="100" value="0"></progress></div>
+            <hr class="divider">
+            <div class="row"><span class="label">存在危机感:</span><progress data-prog="沈昌珉.心理与情感.存在危机感" max="100" value="0"></progress></div>
+            <div class="row"><span class="label">好奇度:</span><progress data-prog="沈昌珉.心理与情感.好奇度" max="100" value="0"></progress></div>
+            <div class="row"><span class="label">眷恋度:</span><progress data-prog="沈昌珉.心理与情感.眷恋度" max="100" value="0"></progress></div>
+          </div>
+        </div>
+
+        <div id="tab-max-anchor" class="tab-content max-only-view">
+          <div class="section transparent-bg flex-fill">
+            <div class="sub-tab-container">
+              <div class="sub-tab-btn active" data-parent="manchor" data-target="sub-ma-monitor">👁️ SYNC</div>
+              <div class="sub-tab-btn" data-parent="manchor" data-target="sub-ma-compile">🖲️ COMPILE</div>
+            </div>
+            <div id="sub-ma-monitor" class="sub-tab-content active" data-parent="manchor">
+              <div class="section-title" style="color:var(--theme-loc);font-size:13px;border-bottom:none;margin-bottom:4px;">[BIOMETRIC_FIELD]</div>
+              <div class="row-inline"><span class="label">CORE_TEMPERATURE:</span><span class="value" id="val-obs-temp" style="transition: color 0.3s;">-</span></div>
+              <div class="row-inline"><span class="label">ANOMALY_ACTIVITY:</span><span class="value" id="val-obs-power">-</span></div>
+              <div class="row-inline"><span class="label">SOMATIC_INTEGRITY:</span><span class="value" id="val-obs-balance">-</span></div>
+              <div class="row"><span class="label" style="font-size:12px;">CRITICAL_THREAT_INDEX:</span><progress id="prog-law-reject" max="100" value="0"></progress></div>
+              <hr class="divider">
+              <div class="section-title" style="color:var(--theme-loc);font-size:13px;border-bottom:none;margin-bottom:4px;">[INTERVENTION_CHANNEL]</div>
+              <div class="row-inline"><span class="label">LINK_PHASE:</span><span class="value" data-path="沈昌珉.冰晶链接阶段">-</span></div>
+              <div class="row-inline"><span class="label">ACTIVE_COMPUTE_INJECTION:</span><span class="value" style="color:var(--theme-battle);"><span data-path="沈昌珉.观测与干涉.当前输入功率">0</span> W</span></div>
+              <div class="row-inline"><span class="label">CUMULATIVE_COMPUTE_LOAD:</span><span class="value"><span data-path="沈昌珉.观测与干涉.累计算力倾注">0</span> TFLOPs</span></div>
+              <div class="row" style="margin-top:6px;"><span class="label" style="font-size:12px;">ENTROPY_SUPPRESSION_RATE:</span><progress id="prog-heat-convert" max="100" value="0"></progress></div>
+              <div class="row-inline" style="margin-top:4px; align-items:flex-start;"><span class="label" style="font-size:12px; white-space:nowrap; padding-top:2px;">SYS_EVALUATION:</span><span class="value" id="val-intervention-status" style="font-size:13px; text-align:right; line-height:1.3;">-</span></div>
+              <hr class="divider">
+              <div class="section-title" style="color:var(--theme-loc);font-size:13px;border-bottom:none;margin-bottom:4px;">[PSYCHO_SHELL]</div>
+              <div class="row-inline"><span class="label">ICE_SHELL_INTEGRITY:</span><span class="value" id="val-obs-shell">-</span></div>
+              <div class="row-inline"><span class="label">SUBCONSCIOUS_EROSION:</span><span class="value"><span data-path="金珉锡.好感度">0</span>%</span></div>
+            </div>
+            <div id="sub-ma-compile" class="sub-tab-content" data-parent="manchor">
+              <div id="compile-empty-state" class="empty-text" style="padding-top: 30px;">[CORE_COMPILATION_OFFLINE]</div>
+              <div id="compile-active-state" style="display:none;">
+                <div class="section-title" style="color:var(--theme-loc);font-size:13px;border-bottom:none;margin-bottom:4px;">[COMPILE_PROCESS]</div>
+                <div class="row-inline"><span class="label">COMPILE_PHASE:</span><span class="value" data-path="沈昌珉.终局决断.核心编译分支">-</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-max-eval" class="tab-content max-only-view">
+          <div class="section transparent-bg"><div class="section-title">👁️ GLOBAL_ANOMALY_OBSERVATION</div><div id="global-nodes-list"></div></div>
+        </div>
+
+        <div id="tab-max-forum" class="tab-content max-only-view">
+          <div class="section transparent-bg flex-fill">
+            <div class="sub-tab-container">
+              <div class="sub-tab-btn active" data-parent="mforum" data-target="sub-mf-hot">🕸️ 抓取</div>
+              <div class="sub-tab-btn" data-parent="mforum" data-target="sub-mf-log">💻 日志</div>
+            </div>
+            <div id="sub-mf-hot" class="sub-tab-content active" data-parent="mforum">
+              <div class="forum-meta-header">
+                <div class="row-inline"><span class="label">PLATFORM:</span><span class="value" id="val-forum-platform" style="color:var(--text-main);">-</span></div>
+                <div class="row-inline"><span class="label">BOARD:</span><span class="value" id="val-forum-board" style="color:var(--text-main);">-</span></div>
+                <div class="row-inline"><span class="label">SNAPSHOT:</span><span class="value" id="val-forum-time" style="color:var(--text-main);">-</span></div>
+              </div>
+              <div class="forum-list" id="forum-tab-hot-list"></div>
+            </div>
+            <div id="sub-mf-log" class="sub-tab-content" data-parent="mforum">
+              <div class="console-wrapper">
+                <div class="console-header">DATA_STREAM_MONITOR [Running]</div>
+                <div class="console-log" id="data-console-log"><div class="console-line"><span class="sys-tag">SYS</span>Hook initialized.</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ticker-wrap" id="ticker-wrap">
+      <div class="ticker-label">📻 SYS_BROADCAST</div>
+      <div class="ticker-content"><div class="ticker-text" id="news-ticker"></div></div>
+    </div>
+  </div>
+</body>
+</html>
+```

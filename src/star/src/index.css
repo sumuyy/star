@@ -1,0 +1,274 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* ============================================
+   主题色板 — 借用「星河璀璨·数据库」的 4 套配色
+   xiumin = 钢蓝 / max = 暗红，再各分日/夜
+   ============================================ */
+:root,
+[data-star-theme="xiumin-day"] {
+  --text-main: #333333;
+  --text-muted: rgba(0, 0, 0, 0.55);
+  --bg-shell: #f0f4fe;
+  --bg-header: linear-gradient(90deg, #b2e1fc, #d4efff);
+  --bg-sidebar: rgba(178, 225, 252, 0.95);
+  --bg-content: linear-gradient(135deg, #b2e1fc, #f0f4fe);
+  --bg-card: rgba(255, 255, 255, 0.55);
+  --bg-soft: rgba(255, 255, 255, 0.35);
+  --border-color: rgba(0, 0, 0, 0.12);
+  --border-dashed: rgba(0, 0, 0, 0.22);
+  --theme-primary: #43638c;
+  --theme-time: #1565c0;
+  --theme-loc: #00695c;
+  --theme-battle: #b71c1c;
+  --theme-scroll: rgba(67, 99, 140, 0.5);
+}
+
+[data-star-theme="xiumin-night"] {
+  --text-main: #add1f3;
+  --text-muted: rgba(255, 255, 255, 0.45);
+  --bg-shell: #080C13;
+  --bg-header: linear-gradient(90deg, #080C13, #0d121b);
+  --bg-sidebar: rgba(8, 12, 19, 0.96);
+  --bg-content: linear-gradient(135deg, #080C13, #0d121b);
+  --bg-card: rgba(255, 255, 255, 0.04);
+  --bg-soft: rgba(255, 255, 255, 0.025);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-dashed: rgba(255, 255, 255, 0.16);
+  --theme-primary: #add1f3;
+  --theme-time: #64b5f6;
+  --theme-loc: #4db6ac;
+  --theme-battle: #e57373;
+  --theme-scroll: rgba(173, 209, 243, 0.2);
+}
+
+[data-star-theme="max-day"] {
+  --text-main: #333333;
+  --text-muted: rgba(0, 0, 0, 0.6);
+  --bg-shell: #fef0f2;
+  --bg-header: linear-gradient(90deg, #fcaebb, #fdd5d9);
+  --bg-sidebar: rgba(252, 174, 187, 0.95);
+  --bg-content: linear-gradient(135deg, #fcaebb, #fef0f2);
+  --bg-card: rgba(255, 255, 255, 0.55);
+  --bg-soft: rgba(255, 255, 255, 0.4);
+  --border-color: rgba(173, 30, 24, 0.15);
+  --border-dashed: rgba(173, 30, 24, 0.25);
+  --theme-primary: #ad1e18;
+  --theme-time: #43638c;
+  --theme-loc: #43638c;
+  --theme-battle: #ad1e18;
+  --theme-scroll: rgba(173, 30, 24, 0.4);
+}
+
+[data-star-theme="max-night"] {
+  --text-main: #eae0e0;
+  --text-muted: rgba(234, 224, 224, 0.55);
+  --bg-shell: #2a1a1f;
+  --bg-header: linear-gradient(90deg, #2a1a1f, #321f25);
+  --bg-sidebar: rgba(42, 26, 31, 0.96);
+  --bg-content: linear-gradient(135deg, #2a1a1f, #321f25);
+  --bg-card: rgba(173, 30, 24, 0.08);
+  --bg-soft: rgba(173, 30, 24, 0.05);
+  --border-color: rgba(173, 30, 24, 0.32);
+  --border-dashed: rgba(173, 30, 24, 0.42);
+  --theme-primary: #ad1e18;
+  --theme-time: #eae0e0;
+  --theme-loc: #eae0e0;
+  --theme-battle: #ad1e18;
+  --theme-scroll: rgba(173, 30, 24, 0.3);
+}
+
+/* ============================================
+   主题配套的便利类（让 tailwind 之外的颜色可控）
+   ============================================ */
+.star-shell {
+  background: var(--bg-content);
+  color: var(--text-main);
+  transition: background 0.45s ease, color 0.35s ease;
+}
+
+.star-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  backdrop-filter: blur(6px);
+  transition: background 0.35s ease, color 0.35s ease, border-color 0.35s ease;
+}
+
+.star-card-soft {
+  background: var(--bg-soft);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+
+.star-text-primary {
+  color: var(--theme-primary);
+}
+.star-text-muted {
+  color: var(--text-muted);
+}
+.star-text-loc {
+  color: var(--theme-loc);
+}
+.star-text-time {
+  color: var(--theme-time);
+}
+.star-text-battle {
+  color: var(--theme-battle);
+}
+
+.star-border {
+  border-color: var(--border-color);
+}
+.star-border-dashed {
+  border-color: var(--border-dashed);
+}
+.star-divider {
+  border-bottom: 1px dashed var(--border-dashed);
+}
+
+.star-bar-bg {
+  background: rgba(255, 255, 255, 0.12);
+}
+[data-star-theme="xiumin-day"] .star-bar-bg,
+[data-star-theme="max-day"] .star-bar-bg {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* 队友详情弹窗背景 - 跟面板保持同款渐变 */
+.star-modal-bg {
+  background: var(--bg-content);
+}
+
+.star-modal-card {
+  background: var(--bg-card);
+}
+
+.star-bar-fill {
+  background: var(--theme-primary);
+  transition: width 0.3s ease;
+}
+.star-bar-warn {
+  background: var(--theme-battle);
+}
+
+.star-btn {
+  background: var(--bg-soft);
+  border: 1px solid var(--border-color);
+  color: var(--theme-primary);
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.star-btn:hover:not(:disabled) {
+  background: var(--bg-card);
+  border-color: var(--theme-primary);
+}
+.star-btn-active {
+  background: var(--theme-primary);
+  color: var(--bg-shell);
+  border-color: var(--theme-primary);
+}
+
+.star-input {
+  background: var(--bg-soft);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+.star-input::placeholder {
+  color: var(--text-muted);
+}
+.star-input:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+}
+
+/* ============================================
+   原本的扫线 / 微动效保留
+   ============================================ */
+.scanline-overlay {
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.18) 50%);
+  background-size: 100% 4px;
+}
+
+.coding-scan-glow {
+  text-shadow: 0 0 10px var(--theme-primary), 0 0 20px var(--theme-primary);
+  opacity: 0.85;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+.marquee {
+  display: inline-block;
+  padding-left: 100%;
+  animation: marquee 28s linear infinite;
+  white-space: nowrap;
+}
+.marquee-wrapper {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.animate-spin-slow {
+  animation: spin 8s linear infinite;
+}
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 主题感知的径向暗化层（白天用浅色，夜间用深色） */
+.bg-radial-gradient-effect {
+  background: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.25) 100%);
+  pointer-events: none;
+}
+[data-star-theme$="-day"] .bg-radial-gradient-effect {
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0) 0%, rgba(0, 0, 0, 0.06) 100%);
+}
+
+/* 暗网面板滚动条 — 走主题变量，避免在浅色主题下出现刺眼的浅灰条 */
+.darkweb-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-scroll) transparent;
+}
+.darkweb-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.darkweb-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.darkweb-scroll::-webkit-scrollbar-thumb {
+  background: var(--theme-scroll);
+  border-radius: 3px;
+}
+.darkweb-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-primary);
+}
