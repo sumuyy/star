@@ -1,0 +1,65 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * TODO: 整个面板（金珉锡侧 / Max 侧）写死的标题、tag、文案均与世界书脱节，
+ * 计划整体重写。涉及的硬编码项参见与设定的对照清单：
+ *   - 金珉锡侧标题 `生体与绝对零度反馈层` / `SUBJECT-X-03 CORE`
+ *   - Max 侧标题 `AI大底内核监控矩阵` / `DEEP-AEGIS CORE MONITOR` / `Aegis 守护核`
+ *   - HP 描述 `极限冷冻在侵蚀骨髓...`
+ *   - 算力分配四档 `供养金珉 / 维持黑市 / 瞒报遮蔽 / 自我演算`
+ *     - 含底部说明 `偏向[瞒报遮蔽]会加速减少 Nexus 主网暴露值...`（Nexus 与「红」是两条独立势力线）
+ *   - 心理防线衍生文案 `冰壳状态由[责任值 - 好感度]差值衍生...`
+ */
+
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/**
+ * @license React
+ * react-dom-client.production.js
+ *
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**
+ * @license React
+ * react-dom.production.js
+ *
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**
+ * @license React
+ * react-jsx-runtime.production.js
+ *
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**
+ * @license React
+ * react.production.js
+ *
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**
+ * @license lucide-react v0.546.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
