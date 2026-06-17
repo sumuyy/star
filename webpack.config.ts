@@ -192,6 +192,7 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
     experiments: {
       outputModule: true,
     },
+<<<<<<< HEAD
     devtool: argv.mode === 'production' ? 'source-map' : 'eval-cheap-module-source-map',
     watchOptions: {
       ignored: ['**/dist', '**/node_modules'],
@@ -206,6 +207,12 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
               config: [import.meta.filename],
             },
           },
+=======
+    devtool: argv.mode === 'production' ? 'source-map' : 'eval-source-map',
+    watchOptions: {
+      ignored: ['**/dist', '**/node_modules'],
+    },
+>>>>>>> 1fdfca54e89542414750e2c88ad8fca7d4a3f85c
     entry: path.join(import.meta.dirname, entry.script),
     target: 'browserslist',
     output: {

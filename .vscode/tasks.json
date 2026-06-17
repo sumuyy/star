@@ -43,14 +43,22 @@
     {
       "label": "开始任务",
       "dependsOn": [
+<<<<<<< HEAD
         "开始监听源代码并编译"
+=======
+        "开始监听源代码并编译",
+>>>>>>> 1fdfca54e89542414750e2c88ad8fca7d4a3f85c
       ]
     },
     {
       "label": "结束任务",
       "command": "echo ${input:terminate}",
       "type": "shell"
+<<<<<<< HEAD
     }
+=======
+    },
+>>>>>>> 1fdfca54e89542414750e2c88ad8fca7d4a3f85c
   ],
   "inputs": [
     {
