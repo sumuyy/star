@@ -1396,7 +1396,7 @@ export default function GameScreen({
                   })}
                 </div>
 
-                <div role="tabpanel" className="min-w-0 flex-1 animate-fadeIn">
+                <div role="tabpanel" className="min-w-0 flex-1 animate-fadeIn h-[450px] overflow-hidden">
                   {activeInfoTab.content}
                 </div>
               </div>

@@ -123,7 +123,7 @@ export default function SocialPanel({ bonds }: SocialPanelProps) {
   return (
     <div
       id="social-panel-root"
-      className="rounded-lg p-5 font-mono select-none relative overflow-hidden h-[640px] flex flex-col star-card"
+      className="rounded-lg p-5 font-mono select-none relative overflow-hidden h-full flex flex-col star-card"
     >
       <div className="absolute top-2 left-2 text-[10px] text-rose-500/30">
         SOCIAL_BOND_MATRIX // RELATIONSHIP_FEED

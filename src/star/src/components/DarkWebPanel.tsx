@@ -154,7 +154,7 @@ export default function DarkWebPanel({ posts, forumMeta, onAddLog }: DarkWebPane
   return (
     <div
       id="dark-web-panel-root"
-      className="rounded-lg p-5 font-mono select-none relative overflow-hidden h-[640px] flex flex-col star-card"
+      className="rounded-lg p-5 font-mono select-none relative overflow-hidden h-full flex flex-col star-card"
     >
       {/* Absolute tech dots overlay */}
       <div className="absolute top-2 left-2 text-[10px] text-red-500/30">HOT_FORUM_BBS // DAEMON_RECOV</div>

@@ -27,13 +27,13 @@ export default function TeammatesPanel({ teammates }: TeammatesPanelProps) {
   const departedTeammates = teammates.filter(t => t.status !== "在场");
 
   return (
-    <div id="teammates-panel" className="rounded-lg p-5 font-mono select-none relative overflow-hidden h-full flex flex-col justify-between">
+    <div id="teammates-panel" className="rounded-lg p-5 font-mono select-none relative overflow-hidden h-full flex flex-col">
       {/* Background Matrix Pattern */}
       <div className="absolute inset-0 bg-dotted-pattern opacity-5 pointer-events-none" />
 
-      <div className="space-y-4">
+      <div className="flex-grow min-h-0 flex flex-col overflow-hidden">
         {/* Title and Top */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-indigo-400" />
             <span className="text-[12px] text-slate-400 uppercase tracking-widest font-semibold">异能同天体队友状态 (在场 / 反噬)</span>
@@ -41,10 +41,10 @@ export default function TeammatesPanel({ teammates }: TeammatesPanelProps) {
         </div>
 
         {/* Teammates List */}
-        <div className="space-y-2.5">
+        <div className="flex-grow min-h-0 overflow-y-auto pr-1 space-y-2.5 teammates-scroll">
 
           {/* 在场队友 - 完整卡片 */}
-          <div className="space-y-2">
+          <div className="space-y-2 pt-2">
             {presentTeammates.length === 0 ? (
               <div className="text-[12px] text-slate-500 px-2 py-3 text-center">[ 频率未共鸣 / 信号被切断 ]</div>
             ) : (
@@ -137,45 +137,46 @@ export default function TeammatesPanel({ teammates }: TeammatesPanelProps) {
 
       {/* Teammate Bio modal */}
       {selectedTeammate && (
-        <div className="absolute inset-0 star-modal-bg border border-indigo-500/20 rounded-lg p-5 flex flex-col justify-between font-mono animate-fadeIn z-30">
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
-              <div>
-                <span className="text-[11px] text-indigo-400 uppercase">天体同盟深度履历档案</span>
-                <h4 className="text-base font-bold text-slate-200">{selectedTeammate.name}</h4>
-              </div>
-              <button
-                onClick={() => setSelectedTeammate(null)}
-                className="text-[12px] text-rose-400 border border-rose-500/30 hover:bg-rose-950/30 px-2 py-0.5 rounded transition"
-              >
-                关闭档案
-              </button>
+        <div className="absolute inset-0 h-[420px] star-modal-bg border border-indigo-500/20 rounded-lg p-5 flex flex-col font-mono animate-fadeIn z-30">
+          {/* 顶部标题栏 */}
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3 shrink-0">
+            <div>
+              <span className="text-[11px] text-indigo-400 uppercase">天体同盟深度履历档案</span>
+              <h4 className="text-base font-bold text-slate-200">{selectedTeammate.name}</h4>
             </div>
+            <button
+              onClick={() => setSelectedTeammate(null)}
+              className="text-[12px] text-rose-400 border border-rose-500/30 hover:bg-rose-950/30 px-2 py-0.5 rounded transition"
+            >
+              关闭档案
+            </button>
+          </div>
 
-            <div className="space-y-3.5 text-sm">
-              <p className="text-slate-400 leading-relaxed text-justify">
-                当前状态 <span className="text-sky-300 font-bold">{selectedTeammate.status}</span>
-                {selectedTeammate.location !== "未知" ? <> @ <span className="text-slate-200">{selectedTeammate.location}</span></> : null}
-                。动向：<span className="text-slate-300">{selectedTeammate.currentMove}</span>
-              </p>
+          {/* 可滚动内容区 */}
+          <div className="flex-grow overflow-y-auto pr-2 space-y-3.5 text-sm">
+            <p className="text-slate-400 leading-relaxed text-justify">
+              当前状态 <span className="text-sky-300 font-bold">{selectedTeammate.status}</span>
+              {selectedTeammate.location !== "未知" ? <> @ <span className="text-slate-200">{selectedTeammate.location}</span></> : null}
+              。动向：<span className="text-slate-300">{selectedTeammate.currentMove}</span>
+            </p>
 
-              <div className="p-2 star-modal-card border border-slate-800 rounded space-y-1.5">
-                <div className="flex justify-between"><span className="text-slate-500">觉醒节点:</span><span className="text-slate-200">{selectedTeammate.awakening}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">能力解放度:</span><span className="text-slate-200">{selectedTeammate.liberation}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">FC 状态:</span><span className="text-slate-200">{selectedTeammate.fcState}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">伪装身份:</span><span className="text-slate-200 truncate ml-2 max-w-[180px]">{selectedTeammate.disguise}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">机甲动向:</span><span className="text-slate-200 truncate ml-2 max-w-[180px]">{selectedTeammate.mechMove}</span></div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">肉体反噬度:</span>
-                  <span className={`font-bold ${selectedTeammate.backlash < 0 ? "text-slate-500" : selectedTeammate.backlash > 50 ? "text-rose-400" : "text-amber-400"}`}>
-                    {selectedTeammate.backlash < 0 ? "未读取" : `${selectedTeammate.backlash}%`}
-                  </span>
-                </div>
+            <div className="p-2 star-modal-card border border-slate-800 rounded space-y-1.5">
+              <div className="flex justify-between"><span className="text-slate-500">觉醒节点:</span><span className="text-slate-200">{selectedTeammate.awakening}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">能力解放度:</span><span className="text-slate-200">{selectedTeammate.liberation}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">FC 状态:</span><span className="text-slate-200">{selectedTeammate.fcState}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">伪装身份:</span><span className="text-slate-200 truncate ml-2 max-w-[180px]">{selectedTeammate.disguise}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">机甲动向:</span><span className="text-slate-200 truncate ml-2 max-w-[180px]">{selectedTeammate.mechMove}</span></div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">肉体反噬度:</span>
+                <span className={`font-bold ${selectedTeammate.backlash < 0 ? "text-slate-500" : selectedTeammate.backlash > 50 ? "text-rose-400" : "text-amber-400"}`}>
+                  {selectedTeammate.backlash < 0 ? "未读取" : `${selectedTeammate.backlash}%`}
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="mt-4 pt-2 border-t border-slate-800 flex items-center gap-1.5 text-[11px] text-slate-500">
+          {/* 底部固定提示栏 */}
+          <div className="mt-4 pt-2 border-t border-slate-800 flex items-center gap-1.5 text-[11px] text-slate-500 shrink-0">
             <Info className="w-3.5 h-3.5 text-indigo-400" />
             <span>双视角干预指令：沈昌珉可通过算力过载提供反噬阻断！</span>
           </div>
